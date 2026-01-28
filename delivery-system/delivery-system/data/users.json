@@ -1,0 +1,37 @@
+{
+  "users": [
+    {
+      "id": "u1",
+      "name": "Sarah Johnson",
+      "lat": -6.1626,
+      "lon": 39.1924,
+      "preferences": {
+        "cuisine": ["seafood", "international"],
+        "max_distance": 2.0,
+        "price_range": "$$$"
+      }
+    },
+    {
+      "id": "u2",
+      "name": "Ahmed Khalfan",
+      "lat": -6.1634,
+      "lon": 39.1917,
+      "preferences": {
+        "cuisine": ["swahili", "indian"],
+        "max_distance": 1.5,
+        "price_range": "$$"
+      }
+    },
+    {
+      "id": "u3",
+      "name": "Emily Chen",
+      "lat": -6.1616,
+      "lon": 39.1913,
+      "preferences": {
+        "cuisine": ["cafe", "vegetarian"],
+        "max_distance": 1.0,
+        "price_range": "$$"
+      }
+    }
+  ]
+}

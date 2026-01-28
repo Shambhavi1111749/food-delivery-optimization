@@ -1,0 +1,100 @@
+{
+  "drivers": [
+    {
+      "id": "d1",
+      "name": "Ali Hassan",
+      "lat": -6.1624,
+      "lon": 39.1923,
+      "vehicle_type": "boda",
+      "cost_per_km": 1.2,
+      "rating": 4.7,
+      "total_trips": 450,
+      "availability": "available",
+      "reliability_score": 0.95
+    },
+    {
+      "id": "d2",
+      "name": "Fatma Saleh",
+      "lat": -6.1631,
+      "lon": 39.1914,
+      "vehicle_type": "bajaji",
+      "cost_per_km": 1.5,
+      "rating": 4.8,
+      "total_trips": 520,
+      "availability": "available",
+      "reliability_score": 0.97
+    },
+    {
+      "id": "d3",
+      "name": "Mohammed Juma",
+      "lat": -6.1619,
+      "lon": 39.1908,
+      "vehicle_type": "boda",
+      "cost_per_km": 1.1,
+      "rating": 4.5,
+      "total_trips": 380,
+      "availability": "busy",
+      "reliability_score": 0.88
+    },
+    {
+      "id": "d4",
+      "name": "Amina Omar",
+      "lat": -6.1638,
+      "lon": 39.1918,
+      "vehicle_type": "bajaji",
+      "cost_per_km": 1.4,
+      "rating": 4.9,
+      "total_trips": 610,
+      "availability": "available",
+      "reliability_score": 0.98
+    },
+    {
+      "id": "d5",
+      "name": "Said Khamis",
+      "lat": -6.1613,
+      "lon": 39.1916,
+      "vehicle_type": "boda",
+      "cost_per_km": 1.0,
+      "rating": 4.3,
+      "total_trips": 290,
+      "availability": "available",
+      "reliability_score": 0.85
+    },
+    {
+      "id": "d6",
+      "name": "Maryam Ali",
+      "lat": -6.1644,
+      "lon": 39.1913,
+      "vehicle_type": "bajaji",
+      "cost_per_km": 1.6,
+      "rating": 4.6,
+      "total_trips": 410,
+      "availability": "available",
+      "reliability_score": 0.92
+    },
+    {
+      "id": "d7",
+      "name": "Hamisi Bakari",
+      "lat": -6.1622,
+      "lon": 39.1929,
+      "vehicle_type": "boda",
+      "cost_per_km": 1.3,
+      "rating": 4.4,
+      "total_trips": 340,
+      "availability": "available",
+      "reliability_score": 0.90
+    },
+    {
+      "id": "d8",
+      "name": "Zainab Seif",
+      "lat": -6.1627,
+      "lon": 39.1902,
+      "vehicle_type": "bajaji",
+      "cost_per_km": 1.5,
+      "rating": 4.7,
+      "total_trips": 480,
+      "availability": "busy",
+      "reliability_score": 0.94
+    }
+  ]
+}

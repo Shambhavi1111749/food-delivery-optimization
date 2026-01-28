@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engine 2: Driver Assignment</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Engine 2: Driver Assignment</h1>
+            <p class="subtitle">Optimal Multi-Factor Selection</p>
+            <nav>
+                <a href="/">Home</a>
+                <a href="/engine1">Engine 1: Restaurants</a>
+                <a href="/engine2" class="active">Engine 2: Drivers</a>
+                <a href="/engine3">Engine 3: Routes</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Input Controls -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Order Configuration</h3>
+                <span class="badge badge-warning">Configure</span>
+            </div>
+            
+            <div class="grid grid-3">
+                <div class="form-group">
+                    <label for="restaurant-lat">Restaurant Latitude</label>
+                    <input type="text" id="restaurant-lat" value="-6.1628" />
+                </div>
+
+                <div class="form-group">
+                    <label for="restaurant-lon">Restaurant Longitude</label>
+                    <input type="text" id="restaurant-lon" value="39.1922" />
+                </div>
+
+                <div class="form-group">
+                    <label for="order-size">Order Size</label>
+                    <select id="order-size">
+                        <option value="small">Small</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="large">Large</option>
+                    </select>
+                </div>
+            </div>
+
+            <button id="assign-btn" class="btn btn-primary">
+                <span class="btn-text">🚗 Assign Driver</span>
+            </button>
+        </div>
+
+        <!-- Map Visualization -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Driver Locations & Road Network</h3>
+                <span class="badge badge-success" id="status-badge">Ready</span>
+            </div>
+            <div id="map"></div>
+        </div>
+
+        <!-- Algorithm Timeline -->
+        <div class="card" id="timeline-card" style="display: none;">
+            <div class="card-header">
+                <h3 class="card-title">Algorithm Timeline</h3>
+                <span class="badge badge-info">Analysis</span>
+            </div>
+            <div id="timeline"></div>
+        </div>
+
+        <!-- Selected Driver -->
+        <div id="selected-container"></div>
+
+        <!-- Backup Drivers -->
+        <div id="backup-container"></div>
+
+        <!-- Rejected Drivers -->
+        <div id="rejected-container"></div>
+    </div>
+
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([-6.1630, 39.1915], 14);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let restaurantMarker = null;
+        let markers = [];
+
+        // Load and draw road network
+        fetch('/api/graph/info')
+            .then(res => res.json())
+            .then(data => {
+                // Draw all road edges
+                data.edges.forEach(edge => {
+                    const from = data.nodes.find(n => n.id === edge.from);
+                    const to = data.nodes.find(n => n.id === edge.to);
+                    
+                    L.polyline(
+                        [[from.lat, from.lon], [to.lat, to.lon]],
+                        {color: '#2d3454', weight: 2, opacity: 0.5}
+                    ).addTo(map);
+                });
+                
+                // Draw nodes
+                data.nodes.forEach(node => {
+                    L.circleMarker([node.lat, node.lon], {
+                        radius: 3,
+                        fillColor: '#9fa4c4',
+                        fillOpacity: 0.6,
+                        color: '#9fa4c4',
+                        weight: 1
+                    }).bindTooltip(node.name, {permanent: false})
+                     .addTo(map);
+                });
+            });
+
+        // Assign driver
+        document.getElementById('assign-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('assign-btn');
+            const btnText = btn.querySelector('.btn-text');
+            const originalText = btnText.textContent;
+            
+            btnText.innerHTML = '<span class="loading"></span> Assigning...';
+            btn.disabled = true;
+            
+            document.getElementById('status-badge').textContent = 'Processing';
+            document.getElementById('status-badge').className = 'badge badge-warning';
+
+            // Clear previous markers
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            if (restaurantMarker) map.removeLayer(restaurantMarker);
+
+            try {
+                const response = await fetch('/api/engine2/assign', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        restaurant_lat: parseFloat(document.getElementById('restaurant-lat').value),
+                        restaurant_lon: parseFloat(document.getElementById('restaurant-lon').value),
+                        order_size: document.getElementById('order-size').value,
+                        num_backups: 2
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    alert(result.error);
+                    return;
+                }
+
+                // Place restaurant marker
+                restaurantMarker = L.marker(
+                    [parseFloat(document.getElementById('restaurant-lat').value), 
+                     parseFloat(document.getElementById('restaurant-lon').value)], 
+                    {
+                        icon: L.divIcon({
+                            className: 'restaurant-marker',
+                            html: '<div style="background: #ffd740; width: 25px; height: 25px; border-radius: 50%; border: 3px solid #0a0e27;"></div>',
+                            iconSize: [25, 25]
+                        })
+                    }
+                ).addTo(map);
+
+                // Display timeline
+                displayTimeline(result);
+
+                // Display selected driver
+                displaySelectedDriver(result.selected_driver);
+
+                // Display backup drivers
+                displayBackupDrivers(result.backup_drivers);
+
+                // Display rejected drivers
+                displayRejectedDrivers(result.rejected_drivers);
+
+                // Mark drivers on map
+                const driver = result.selected_driver;
+                const marker = L.marker([driver.lat, driver.lon], {
+                    icon: L.divIcon({
+                        className: 'driver-marker',
+                        html: `<div style="background: linear-gradient(135deg, #00e676, #00e5ff); color: #0a0e27; font-weight: bold; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #0a0e27; font-size: 18px;">✓</div>`,
+                        iconSize: [35, 35]
+                    })
+                }).bindPopup(`<strong>${driver.name}</strong><br>${driver.vehicle_type}<br>Cost: ${driver.cost_score.toFixed(3)}`);
+                
+                marker.addTo(map);
+                markers.push(marker);
+
+                // Mark backup drivers
+                result.backup_drivers.forEach(driver => {
+                    const marker = L.marker([driver.lat, driver.lon], {
+                        icon: L.divIcon({
+                            className: 'backup-marker',
+                            html: `<div style="background: #9fa4c4; color: #0a0e27; font-weight: bold; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #0a0e27; font-size: 12px;">B</div>`,
+                            iconSize: [25, 25]
+                        })
+                    }).bindPopup(`<strong>${driver.name}</strong> (Backup)<br>${driver.vehicle_type}`);
+                    
+                    marker.addTo(map);
+                    markers.push(marker);
+                });
+
+                document.getElementById('status-badge').textContent = 'Complete';
+                document.getElementById('status-badge').className = 'badge badge-success';
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error assigning driver');
+            }
+
+            btnText.textContent = originalText;
+            btn.disabled = false;
+        });
+
+        function displayTimeline(result) {
+            const card = document.getElementById('timeline-card');
+            const timeline = document.getElementById('timeline');
+            
+            const total_drivers = result.selected_driver ? 1 + result.backup_drivers.length + result.rejected_drivers.length : 0;
+            
+            timeline.innerHTML = `
+                <div class="explanation">
+<strong>Phase 1: GREEDY FEASIBILITY PRUNING</strong>
+• Evaluated ${total_drivers} available drivers
+• Applied hard constraints:
+  - Maximum distance: 5.0km via road graph
+  - Minimum rating: 4.0★
+• Rejected ${result.rejected_drivers.length} drivers
+• Feasible candidates: ${1 + result.backup_drivers.length}
+
+<strong>Phase 2: SOFT CONSTRAINT PENALTIES</strong>
+• Calculated weighted cost for each feasible driver:
+  - Distance weight: 40%
+  - Cost rate weight: 25%
+  - Reliability weight: 20%
+  - Rating weight: 15%
+• Applied penalties:
+  - Busy drivers: 2.0x cost multiplier
+  - Vehicle mismatch: 1.5x multiplier
+
+<strong>Phase 3: PRIORITY SELECTION</strong>
+• Sorted drivers by total cost score (lower is better)
+• Selected best driver: ${result.selected_driver.name}
+• Identified ${result.backup_drivers.length} backup drivers
+                </div>
+            `;
+            
+            card.style.display = 'block';
+        }
+
+        function displaySelectedDriver(driver) {
+            const container = document.getElementById('selected-container');
+            
+            container.innerHTML = `
+                <div class="card" style="border: 2px solid #00e676;">
+                    <div class="card-header">
+                        <h3 class="card-title">✅ SELECTED DRIVER</h3>
+                        <span class="badge badge-success">Optimal</span>
+                    </div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: var(--accent-primary);">${driver.name}</h3>
+                    
+                    <div class="grid grid-3" style="margin-bottom: 1rem;">
+                        <div>
+                            <strong style="color: var(--accent-primary);">Vehicle:</strong> ${driver.vehicle_type}<br>
+                            <strong style="color: var(--accent-primary);">Distance:</strong> ${driver.distance_km.toFixed(2)}km
+                        </div>
+                        <div>
+                            <strong style="color: var(--accent-primary);">Cost/km:</strong> $${driver.cost_per_km}<br>
+                            <strong style="color: var(--accent-primary);">Rating:</strong> ${driver.rating}★
+                        </div>
+                        <div>
+                            <strong style="color: var(--accent-primary);">Reliability:</strong> ${(driver.reliability_score * 100).toFixed(0)}%<br>
+                            <strong style="color: var(--accent-primary);">Status:</strong> ${driver.availability}
+                        </div>
+                    </div>
+
+                    <div class="stat-item" style="background: linear-gradient(135deg, var(--accent-success), var(--accent-primary)); color: #0a0e27; padding: 1.5rem; border-radius: 8px;">
+                        <span class="stat-value" style="color: #0a0e27; font-size: 2.5rem;">${driver.cost_score.toFixed(3)}</span>
+                        <span class="stat-label" style="color: #0a0e27;">Cost Score (Lower is Better)</span>
+                    </div>
+
+                    <div class="explanation" style="margin-top: 1rem;">
+                        ${driver.explanation}
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayBackupDrivers(drivers) {
+            const container = document.getElementById('backup-container');
+            
+            if (drivers.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            let html = '<div class="card"><div class="card-header"><h3 class="card-title">Backup Drivers</h3><span class="badge badge-info">Alternatives</span></div>';
+            
+            drivers.forEach((driver, index) => {
+                html += `
+                    <div style="padding: 1rem; background: var(--bg-tertiary); border-radius: 6px; margin-top: 1rem;">
+                        <strong>${index + 1}. ${driver.name}</strong> - ${driver.vehicle_type}<br>
+                        <span style="color: var(--text-secondary); font-size: 0.9rem;">
+                            Distance: ${driver.distance_km.toFixed(2)}km | Cost Score: ${driver.cost_score.toFixed(3)}
+                        </span>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function displayRejectedDrivers(drivers) {
+            const container = document.getElementById('rejected-container');
+            
+            if (drivers.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            let html = '<div class="card"><div class="card-header"><h3 class="card-title">Rejected Drivers</h3><span class="badge" style="background: rgba(255, 82, 82, 0.2); color: var(--accent-danger); border: 1px solid var(--accent-danger);">Failed Constraints</span></div>';
+            
+            drivers.slice(0, 5).forEach(driver => {
+                html += `
+                    <div style="padding: 1rem; background: var(--bg-tertiary); border-radius: 6px; margin-top: 1rem; opacity: 0.7;">
+                        <strong style="text-decoration: line-through;">${driver.name}</strong><br>
+                        <span style="color: var(--accent-danger); font-size: 0.9rem;">
+                            ✗ ${driver.rejected_reason}
+                        </span>
+                    </div>
+                `;
+            });
+            
+            if (drivers.length > 5) {
+                html += `<p style="margin-top: 1rem; color: var(--text-muted); text-align: center;">+ ${drivers.length - 5} more rejected</p>`;
+            }
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

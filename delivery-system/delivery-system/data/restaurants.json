@@ -1,0 +1,114 @@
+{
+  "restaurants": [
+    {
+      "id": "r1",
+      "name": "Emerson Spice Rooftop",
+      "lat": -6.1628,
+      "lon": 39.1922,
+      "cuisine": ["seafood", "swahili"],
+      "rating": 4.7,
+      "popularity": 850,
+      "avg_prep_time": 25,
+      "price_range": "$$$$"
+    },
+    {
+      "id": "r2",
+      "name": "Lukmaan Restaurant",
+      "lat": -6.1633,
+      "lon": 39.1918,
+      "cuisine": ["swahili", "indian"],
+      "rating": 4.5,
+      "popularity": 920,
+      "avg_prep_time": 20,
+      "price_range": "$$"
+    },
+    {
+      "id": "r3",
+      "name": "Forodhani Night Market",
+      "lat": -6.1623,
+      "lon": 39.1926,
+      "cuisine": ["street_food", "seafood"],
+      "rating": 4.3,
+      "popularity": 1500,
+      "avg_prep_time": 10,
+      "price_range": "$"
+    },
+    {
+      "id": "r4",
+      "name": "The Rock Restaurant",
+      "lat": -6.1618,
+      "lon": 39.1928,
+      "cuisine": ["seafood", "international"],
+      "rating": 4.8,
+      "popularity": 650,
+      "avg_prep_time": 35,
+      "price_range": "$$$$$"
+    },
+    {
+      "id": "r5",
+      "name": "6 Degrees South",
+      "lat": -6.1622,
+      "lon": 39.1912,
+      "cuisine": ["international", "fusion"],
+      "rating": 4.6,
+      "popularity": 720,
+      "avg_prep_time": 30,
+      "price_range": "$$$$"
+    },
+    {
+      "id": "r6",
+      "name": "Zanzibar Coffee House",
+      "lat": -6.1627,
+      "lon": 39.1916,
+      "cuisine": ["cafe", "international"],
+      "rating": 4.4,
+      "popularity": 680,
+      "avg_prep_time": 15,
+      "price_range": "$$"
+    },
+    {
+      "id": "r7",
+      "name": "Stone Town Café",
+      "lat": -6.1632,
+      "lon": 39.1912,
+      "cuisine": ["swahili", "cafe"],
+      "rating": 4.2,
+      "popularity": 540,
+      "avg_prep_time": 18,
+      "price_range": "$$"
+    },
+    {
+      "id": "r8",
+      "name": "Archipelago Restaurant",
+      "lat": -6.1638,
+      "lon": 39.1922,
+      "cuisine": ["seafood", "international"],
+      "rating": 4.6,
+      "popularity": 780,
+      "avg_prep_time": 28,
+      "price_range": "$$$"
+    },
+    {
+      "id": "r9",
+      "name": "Tea House Restaurant",
+      "lat": -6.1642,
+      "lon": 39.1916,
+      "cuisine": ["swahili", "indian"],
+      "rating": 4.3,
+      "popularity": 690,
+      "avg_prep_time": 22,
+      "price_range": "$$"
+    },
+    {
+      "id": "r10",
+      "name": "Beit Al Chai",
+      "lat": -6.1617,
+      "lon": 39.1918,
+      "cuisine": ["cafe", "vegetarian"],
+      "rating": 4.5,
+      "popularity": 610,
+      "avg_prep_time": 12,
+      "price_range": "$$"
+    }
+  ]
+}

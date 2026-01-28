@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engine 1: Restaurant Ranking</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Engine 1: Restaurant Ranking</h1>
+            <p class="subtitle">Intelligent Multi-Factor Recommendation</p>
+            <nav>
+                <a href="/">Home</a>
+                <a href="/engine1" class="active">Engine 1: Restaurants</a>
+                <a href="/engine2">Engine 2: Drivers</a>
+                <a href="/engine3">Engine 3: Routes</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Input Controls -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">User Preferences</h3>
+                <span class="badge badge-info">Configure</span>
+            </div>
+            
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label for="user-select">Select User</label>
+                    <select id="user-select">
+                        {% for user in users %}
+                        <option value="{{ user.lat }},{{ user.lon }}">{{ user.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="cuisine-select">Preferred Cuisine</label>
+                    <select id="cuisine-select">
+                        <option value="">All Cuisines</option>
+                        <option value="seafood">Seafood</option>
+                        <option value="swahili">Swahili</option>
+                        <option value="indian">Indian</option>
+                        <option value="international">International</option>
+                        <option value="street_food">Street Food</option>
+                        <option value="cafe">Café</option>
+                    </select>
+                </div>
+            </div>
+
+            <button id="rank-btn" class="btn btn-primary">
+                <span class="btn-text">🎯 Rank Restaurants</span>
+            </button>
+        </div>
+
+        <!-- Map Visualization -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Stone Town Road Network</h3>
+                <span class="badge badge-success" id="status-badge">Ready</span>
+            </div>
+            <div id="map"></div>
+        </div>
+
+        <!-- Algorithm Explanation -->
+        <div class="card" id="algorithm-card" style="display: none;">
+            <div class="card-header">
+                <h3 class="card-title">Algorithm Process</h3>
+                <span class="badge badge-info">Analysis</span>
+            </div>
+            <div id="algorithm-steps"></div>
+        </div>
+
+        <!-- Results -->
+        <div id="results-container"></div>
+    </div>
+
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([-6.1630, 39.1915], 14);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let userMarker = null;
+        let roadNetwork = null;
+        let markers = [];
+
+        // Load and draw road network
+        fetch('/api/graph/info')
+            .then(res => res.json())
+            .then(data => {
+                roadNetwork = data;
+                
+                // Draw all road edges
+                data.edges.forEach(edge => {
+                    const from = data.nodes.find(n => n.id === edge.from);
+                    const to = data.nodes.find(n => n.id === edge.to);
+                    
+                    L.polyline(
+                        [[from.lat, from.lon], [to.lat, to.lon]],
+                        {color: '#2d3454', weight: 2, opacity: 0.5}
+                    ).addTo(map);
+                });
+                
+                // Draw nodes
+                data.nodes.forEach(node => {
+                    L.circleMarker([node.lat, node.lon], {
+                        radius: 3,
+                        fillColor: '#9fa4c4',
+                        fillOpacity: 0.6,
+                        color: '#9fa4c4',
+                        weight: 1
+                    }).bindTooltip(node.name, {permanent: false})
+                     .addTo(map);
+                });
+            });
+
+        // Rank restaurants
+        document.getElementById('rank-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('rank-btn');
+            const btnText = btn.querySelector('.btn-text');
+            const originalText = btnText.textContent;
+            
+            btnText.innerHTML = '<span class="loading"></span> Analyzing...';
+            btn.disabled = true;
+            
+            document.getElementById('status-badge').textContent = 'Processing';
+            document.getElementById('status-badge').className = 'badge badge-warning';
+
+            // Get user location
+            const userCoords = document.getElementById('user-select').value.split(',');
+            const cuisine = document.getElementById('cuisine-select').value;
+
+            // Clear previous markers
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            if (userMarker) map.removeLayer(userMarker);
+
+            try {
+                const response = await fetch('/api/engine1/rank', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        user_lat: parseFloat(userCoords[0]),
+                        user_lon: parseFloat(userCoords[1]),
+                        preferred_cuisine: cuisine ? [cuisine] : [],
+                        top_k: 5
+                    })
+                });
+
+                const result = await response.json();
+
+                // Place user marker
+                userMarker = L.marker([parseFloat(userCoords[0]), parseFloat(userCoords[1])], {
+                    icon: L.divIcon({
+                        className: 'custom-marker',
+                        html: '<div style="background: #00e5ff; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #0a0e27;"></div>',
+                        iconSize: [20, 20]
+                    })
+                }).addTo(map);
+
+                // Display algorithm steps
+                displayAlgorithmSteps(result);
+
+                // Display results
+                displayResults(result.restaurants);
+
+                // Mark restaurants on map
+                result.restaurants.forEach((restaurant, index) => {
+                    const marker = L.marker([restaurant.lat, restaurant.lon], {
+                        icon: L.divIcon({
+                            className: 'restaurant-marker',
+                            html: `<div style="background: linear-gradient(135deg, #00e5ff, #7c4dff); color: #0a0e27; font-weight: bold; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #0a0e27; font-size: 14px;">${index + 1}</div>`,
+                            iconSize: [30, 30]
+                        })
+                    }).bindPopup(`<strong>#${index + 1} ${restaurant.name}</strong><br>Score: ${restaurant.score.toFixed(3)}`);
+                    
+                    marker.addTo(map);
+                    markers.push(marker);
+                });
+
+                document.getElementById('status-badge').textContent = 'Complete';
+                document.getElementById('status-badge').className = 'badge badge-success';
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error ranking restaurants');
+            }
+
+            btnText.textContent = originalText;
+            btn.disabled = false;
+        });
+
+        function displayAlgorithmSteps(result) {
+            const card = document.getElementById('algorithm-card');
+            const steps = document.getElementById('algorithm-steps');
+            
+            steps.innerHTML = `
+                <div class="explanation">
+<strong>Step 1: GREEDY PRUNING</strong>
+• Eliminated low-rated restaurants (rating < 3.5)
+• Removed restaurants beyond maximum distance (3.0km via roads)
+• Candidates remaining: ${result.restaurants.length}
+
+<strong>Step 2: DISTANCE CALCULATION</strong>
+• Snapped user to road node ${result.user_node}
+• Calculated distances using Dijkstra's algorithm on road graph
+• Used HashMap caching for performance
+
+<strong>Step 3: WEIGHTED SCORING</strong>
+• Rating weight: 25%
+• Popularity weight: 20%
+• Distance weight: 30% (inverse - closer is better)
+• Prep time weight: 15% (inverse - faster is better)
+• Cuisine match weight: 10%
+
+<strong>Step 4: TOP-K SELECTION</strong>
+• Used priority queue (heap) for efficient top-5 selection
+• Results sorted by final score (higher is better)
+                </div>
+            `;
+            
+            card.style.display = 'block';
+        }
+
+        function displayResults(restaurants) {
+            const container = document.getElementById('results-container');
+            
+            let html = '<div class="card"><div class="card-header"><h3 class="card-title">🏆 Top Restaurants</h3><span class="badge badge-success">Ranked</span></div>';
+            
+            restaurants.forEach((restaurant, index) => {
+                html += `
+                    <div class="card fade-in" style="margin-top: 1rem; border-left: 3px solid ${index === 0 ? '#00e5ff' : '#2d3454'};">
+                        <div class="card-header">
+                            <h3 class="card-title">#${index + 1} ${restaurant.name}</h3>
+                            <span class="badge badge-info">Score: ${restaurant.score.toFixed(3)}</span>
+                        </div>
+                        <div class="grid grid-3" style="margin-bottom: 1rem;">
+                            <div>
+                                <strong style="color: var(--accent-primary);">Rating:</strong> ${restaurant.rating}★<br>
+                                <strong style="color: var(--accent-primary);">Popularity:</strong> ${restaurant.popularity}
+                            </div>
+                            <div>
+                                <strong style="color: var(--accent-primary);">Distance:</strong> ${restaurant.distance_km.toFixed(2)}km<br>
+                                <strong style="color: var(--accent-primary);">Prep Time:</strong> ${restaurant.avg_prep_time}min
+                            </div>
+                            <div>
+                                <strong style="color: var(--accent-primary);">Cuisine:</strong> ${restaurant.cuisine.join(', ')}<br>
+                                <strong style="color: var(--accent-primary);">Price:</strong> ${restaurant.price_range}
+                            </div>
+                        </div>
+                        <div class="explanation" style="margin: 0;">
+                            ${restaurant.explanation}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

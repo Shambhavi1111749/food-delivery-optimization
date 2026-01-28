@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Delivery System - DSA Project</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🚀 Food Delivery System</h1>
+            <p class="subtitle">Data Structures & Algorithms Project</p>
+            <nav>
+                <a href="/" class="active">Home</a>
+                <a href="/engine1">Engine 1: Restaurants</a>
+                <a href="/engine2">Engine 2: Drivers</a>
+                <a href="/engine3">Engine 3: Routes</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- System Overview -->
+        <div class="card fade-in">
+            <div class="card-header">
+                <h2 class="card-title">System Overview</h2>
+                <span class="badge badge-success">Graph-Based Routing</span>
+            </div>
+            <p style="margin-bottom: 1.5rem; color: var(--text-secondary); line-height: 1.8;">
+                Professional food delivery optimization system using advanced data structures and algorithms.
+                All routing happens on a real road network graph - NO straight-line shortcuts allowed.
+            </p>
+
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-value" id="node-count">21</span>
+                    <span class="stat-label">Road Nodes</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="edge-count">34</span>
+                    <span class="stat-label">Road Edges</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">3</span>
+                    <span class="stat-label">Engines</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">4</span>
+                    <span class="stat-label">Algorithms</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Engines Grid -->
+        <div class="grid grid-3">
+            <!-- Engine 1 -->
+            <div class="card fade-in fade-in-delay-1">
+                <div class="card-header">
+                    <h3 class="card-title">Engine 1</h3>
+                    <span class="badge badge-info">Ranking</span>
+                </div>
+                <h3 style="font-size: 1.3rem; margin-bottom: 0.75rem;">Restaurant Ranking</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.7;">
+                    Intelligent restaurant recommendation using greedy pruning, priority queues, and dynamic scoring.
+                </p>
+                
+                <div style="margin: 1rem 0; padding: 1rem; background: var(--bg-tertiary); border-radius: 6px; font-size: 0.85rem;">
+                    <strong style="color: var(--accent-primary);">Algorithms Used:</strong><br>
+                    • Greedy Pruning<br>
+                    • Priority Queue (Heap)<br>
+                    • Weighted Scoring<br>
+                    • HashMap Caching<br>
+                    • Graph Dijkstra
+                </div>
+
+                <a href="/engine1" class="btn btn-primary" style="width: 100%; text-align: center; margin-top: 1rem;">
+                    Launch Engine 1 →
+                </a>
+            </div>
+
+            <!-- Engine 2 -->
+            <div class="card fade-in fade-in-delay-2">
+                <div class="card-header">
+                    <h3 class="card-title">Engine 2</h3>
+                    <span class="badge badge-warning">Assignment</span>
+                </div>
+                <h3 style="font-size: 1.3rem; margin-bottom: 0.75rem;">Driver Assignment</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.7;">
+                    Optimal driver selection using feasibility pruning, soft constraints, and multi-factor scoring.
+                </p>
+                
+                <div style="margin: 1rem 0; padding: 1rem; background: var(--bg-tertiary); border-radius: 6px; font-size: 0.85rem;">
+                    <strong style="color: var(--accent-primary);">Algorithms Used:</strong><br>
+                    • Greedy Feasibility<br>
+                    • Soft Constraints<br>
+                    • Cost Optimization<br>
+                    • Priority Selection<br>
+                    • Graph Dijkstra
+                </div>
+
+                <a href="/engine2" class="btn btn-primary" style="width: 100%; text-align: center; margin-top: 1rem;">
+                    Launch Engine 2 →
+                </a>
+            </div>
+
+            <!-- Engine 3 -->
+            <div class="card fade-in fade-in-delay-3">
+                <div class="card-header">
+                    <h3 class="card-title">Engine 3</h3>
+                    <span class="badge badge-success">Optimization</span>
+                </div>
+                <h3 style="font-size: 1.3rem; margin-bottom: 0.75rem;">Route Optimization</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.7;">
+                    Multi-algorithm route comparison: Dijkstra, Modified Dijkstra, A*, and fallback paths.
+                </p>
+                
+                <div style="margin: 1rem 0; padding: 1rem; background: var(--bg-tertiary); border-radius: 6px; font-size: 0.85rem;">
+                    <strong style="color: var(--accent-primary);">Algorithms Used:</strong><br>
+                    • Standard Dijkstra<br>
+                    • Modified Dijkstra<br>
+                    • A* Search<br>
+                    • K-Shortest Paths<br>
+                    • Fallback Routing
+                </div>
+
+                <a href="/engine3" class="btn btn-primary" style="width: 100%; text-align: center; margin-top: 1rem;">
+                    Launch Engine 3 →
+                </a>
+            </div>
+        </div>
+
+        <!-- Critical Rules -->
+        <div class="card fade-in" style="margin-top: 2rem; border-color: var(--accent-danger);">
+            <div class="card-header">
+                <h3 class="card-title" style="color: var(--accent-danger);">⚠️ Critical Implementation Rules</h3>
+            </div>
+            <div style="line-height: 1.8; color: var(--text-secondary);">
+                <strong style="color: var(--text-primary);">1. Graph-Based Routing:</strong> ALL routing happens on road graph edges only. NO straight-line paths.<br>
+                <strong style="color: var(--text-primary);">2. Node Snapping:</strong> All entities (restaurants, drivers, users) snap to nearest road nodes.<br>
+                <strong style="color: var(--text-primary);">3. Edge Dependencies:</strong> If an edge doesn't exist, travel is IMPOSSIBLE.<br>
+                <strong style="color: var(--text-primary);">4. Coordinates for Visualization:</strong> Lat/lon used ONLY for display, not routing.<br>
+                <strong style="color: var(--text-primary);">5. Algorithm Integrity:</strong> Every algorithm operates on the graph structure, not raw coordinates.
+            </div>
+        </div>
+
+        <!-- Technical Details -->
+        <div class="grid grid-2" style="margin-top: 2rem;">
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h3 class="card-title">Data Structures</h3>
+                </div>
+                <ul style="list-style: none; padding: 0; line-height: 2;">
+                    <li>✓ Adjacency List (Graph)</li>
+                    <li>✓ Priority Queue (Min-Heap)</li>
+                    <li>✓ HashMap (Distance Cache)</li>
+                    <li>✓ Parent Pointers</li>
+                    <li>✓ Visited Set</li>
+                </ul>
+            </div>
+
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h3 class="card-title">Algorithms</h3>
+                </div>
+                <ul style="list-style: none; padding: 0; line-height: 2;">
+                    <li>✓ Dijkstra's Algorithm</li>
+                    <li>✓ A* Search</li>
+                    <li>✓ Greedy Pruning</li>
+                    <li>✓ Dynamic Programming</li>
+                    <li>✓ K-Shortest Paths</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load graph statistics
+        fetch('/api/graph/info')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('node-count').textContent = data.total_nodes;
+                document.getElementById('edge-count').textContent = data.total_edges;
+            });
+    </script>
+</body>
+</html>

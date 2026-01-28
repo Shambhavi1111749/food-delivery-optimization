@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engine 3: Route Optimization</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Engine 3: Route Optimization</h1>
+            <p class="subtitle">Multi-Algorithm Comparison</p>
+            <nav>
+                <a href="/">Home</a>
+                <a href="/engine1">Engine 1: Restaurants</a>
+                <a href="/engine2">Engine 2: Drivers</a>
+                <a href="/engine3" class="active">Engine 3: Routes</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Input Controls -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Delivery Configuration</h3>
+                <span class="badge badge-success">Configure</span>
+            </div>
+            
+            <div class="grid grid-3">
+                <div>
+                    <div class="form-group">
+                        <label>Driver Latitude</label>
+                        <input type="text" id="driver-lat" value="-6.1624" />
+                    </div>
+                    <div class="form-group">
+                        <label>Driver Longitude</label>
+                        <input type="text" id="driver-lon" value="39.1923" />
+                    </div>
+                </div>
+
+                <div>
+                    <div class="form-group">
+                        <label>Restaurant Latitude</label>
+                        <input type="text" id="restaurant-lat" value="-6.1628" />
+                    </div>
+                    <div class="form-group">
+                        <label>Restaurant Longitude</label>
+                        <input type="text" id="restaurant-lon" value="39.1922" />
+                    </div>
+                </div>
+
+                <div>
+                    <div class="form-group">
+                        <label>User Latitude</label>
+                        <input type="text" id="user-lat" value="-6.1642" />
+                    </div>
+                    <div class="form-group">
+                        <label>User Longitude</label>
+                        <input type="text" id="user-lon" value="39.1916" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Vehicle Type</label>
+                <select id="vehicle-type">
+                    <option value="boda" selected>Boda (Motorcycle)</option>
+                    <option value="bajaji">Bajaji (Three-wheeler)</option>
+                </select>
+            </div>
+
+            <button id="optimize-btn" class="btn btn-primary">
+                <span class="btn-text">🎯 Optimize Route</span>
+            </button>
+        </div>
+
+        <!-- Map Visualization -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Route Visualization</h3>
+                <span class="badge badge-success" id="status-badge">Ready</span>
+            </div>
+            <div id="map"></div>
+            <div style="margin-top: 1rem; padding: 1rem; background: var(--bg-tertiary); border-radius: 6px;">
+                <strong style="color: var(--accent-primary);">Legend:</strong><br>
+                <span style="color: #2d3454;">━━━</span> Road Network &nbsp;|&nbsp;
+                <span style="color: #7c4dff;">━━━</span> Explored Edges &nbsp;|&nbsp;
+                <span style="color: #00e676;">━━━</span> Final Route
+            </div>
+        </div>
+
+        <!-- Route Summary -->
+        <div id="summary-container"></div>
+
+        <!-- Algorithm Comparison -->
+        <div id="comparison-container"></div>
+
+        <!-- Route Explanation -->
+        <div id="explanation-container"></div>
+    </div>
+
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([-6.1630, 39.1915], 14);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let roadLayers = [];
+        let markers = [];
+
+        // Load and draw road network
+        fetch('/api/graph/info')
+            .then(res => res.json())
+            .then(data => {
+                // Draw all road edges
+                data.edges.forEach(edge => {
+                    const from = data.nodes.find(n => n.id === edge.from);
+                    const to = data.nodes.find(n => n.id === edge.to);
+                    
+                    const layer = L.polyline(
+                        [[from.lat, from.lon], [to.lat, to.lon]],
+                        {color: '#2d3454', weight: 2, opacity: 0.5}
+                    ).addTo(map);
+                    
+                    roadLayers.push(layer);
+                });
+                
+                // Draw nodes
+                data.nodes.forEach(node => {
+                    L.circleMarker([node.lat, node.lon], {
+                        radius: 3,
+                        fillColor: '#9fa4c4',
+                        fillOpacity: 0.6,
+                        color: '#9fa4c4',
+                        weight: 1
+                    }).bindTooltip(node.name, {permanent: false})
+                     .addTo(map);
+                });
+            });
+
+        // Optimize route
+        document.getElementById('optimize-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('optimize-btn');
+            const btnText = btn.querySelector('.btn-text');
+            const originalText = btnText.textContent;
+            
+            btnText.innerHTML = '<span class="loading"></span> Optimizing...';
+            btn.disabled = true;
+            
+            document.getElementById('status-badge').textContent = 'Processing';
+            document.getElementById('status-badge').className = 'badge badge-warning';
+
+            // Clear previous markers
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+
+            try {
+                const response = await fetch('/api/engine3/optimize', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        driver_lat: parseFloat(document.getElementById('driver-lat').value),
+                        driver_lon: parseFloat(document.getElementById('driver-lon').value),
+                        restaurant_lat: parseFloat(document.getElementById('restaurant-lat').value),
+                        restaurant_lon: parseFloat(document.getElementById('restaurant-lon').value),
+                        user_lat: parseFloat(document.getElementById('user-lat').value),
+                        user_lon: parseFloat(document.getElementById('user-lon').value),
+                        vehicle_type: document.getElementById('vehicle-type').value
+                    })
+                });
+
+                const result = await response.json();
+
+                // Place markers
+                placeMarkers();
+
+                // Draw explored edges
+                drawExploredEdges(result.visualization.explored_edges);
+
+                // Draw final routes
+                drawFinalRoute(result.visualization.pickup_path, '#00e5ff');
+                drawFinalRoute(result.visualization.delivery_path, '#00e676');
+
+                // Display results
+                displaySummary(result.route);
+                displayComparison(result.algorithms_comparison);
+                displayExplanation(result.route.explanation);
+
+                document.getElementById('status-badge').textContent = 'Complete';
+                document.getElementById('status-badge').className = 'badge badge-success';
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error optimizing route');
+            }
+
+            btnText.textContent = originalText;
+            btn.disabled = false;
+        });
+
+        function placeMarkers() {
+            // Driver marker
+            const driverMarker = L.marker(
+                [parseFloat(document.getElementById('driver-lat').value), 
+                 parseFloat(document.getElementById('driver-lon').value)],
+                {
+                    icon: L.divIcon({
+                        className: 'marker',
+                        html: '<div style="background: #00e5ff; width: 30px; height: 30px; border-radius: 50%; border: 3px solid #0a0e27; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #0a0e27;">D</div>',
+                        iconSize: [30, 30]
+                    })
+                }
+            ).addTo(map);
+            markers.push(driverMarker);
+
+            // Restaurant marker
+            const restMarker = L.marker(
+                [parseFloat(document.getElementById('restaurant-lat').value), 
+                 parseFloat(document.getElementById('restaurant-lon').value)],
+                {
+                    icon: L.divIcon({
+                        className: 'marker',
+                        html: '<div style="background: #ffd740; width: 30px; height: 30px; border-radius: 50%; border: 3px solid #0a0e27; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #0a0e27;">R</div>',
+                        iconSize: [30, 30]
+                    })
+                }
+            ).addTo(map);
+            markers.push(restMarker);
+
+            // User marker
+            const userMarker = L.marker(
+                [parseFloat(document.getElementById('user-lat').value), 
+                 parseFloat(document.getElementById('user-lon').value)],
+                {
+                    icon: L.divIcon({
+                        className: 'marker',
+                        html: '<div style="background: #00e676; width: 30px; height: 30px; border-radius: 50%; border: 3px solid #0a0e27; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #0a0e27;">U</div>',
+                        iconSize: [30, 30]
+                    })
+                }
+            ).addTo(map);
+            markers.push(userMarker);
+        }
+
+        function drawExploredEdges(edges) {
+            edges.forEach(edge => {
+                const layer = L.polyline(
+                    [[edge.from.lat, edge.from.lon], [edge.to.lat, edge.to.lon]],
+                    {color: '#7c4dff', weight: 3, opacity: 0.3}
+                ).addTo(map);
+                markers.push(layer);
+            });
+        }
+
+        function drawFinalRoute(path, color) {
+            for (let i = 0; i < path.length - 1; i++) {
+                const layer = L.polyline(
+                    [[path[i].lat, path[i].lon], [path[i+1].lat, path[i+1].lon]],
+                    {color: color, weight: 4, opacity: 0.9}
+                ).addTo(map);
+                markers.push(layer);
+            }
+        }
+
+        function displaySummary(route) {
+            const container = document.getElementById('summary-container');
+            
+            container.innerHTML = `
+                <div class="card" style="border: 2px solid #00e676;">
+                    <div class="card-header">
+                        <h3 class="card-title">📊 Route Summary</h3>
+                        <span class="badge badge-success">Optimized</span>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-value">${route.total_distance}</span>
+                            <span class="stat-label">Total Distance (km)</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">${route.total_nodes}</span>
+                            <span class="stat-label">Total Nodes</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">${route.pickup.distance}</span>
+                            <span class="stat-label">Pickup Distance (km)</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">${route.delivery.distance}</span>
+                            <span class="stat-label">Delivery Distance (km)</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-2" style="margin-top: 1.5rem;">
+                        <div style="padding: 1rem; background: var(--bg-tertiary); border-radius: 8px; border-left: 3px solid #00e5ff;">
+                            <strong style="color: #00e5ff;">PICKUP ROUTE</strong><br>
+                            <span style="color: var(--text-secondary); font-size: 0.9rem;">
+                                Algorithm: ${route.pickup.algorithm}<br>
+                                Path: ${route.pickup.path.join(' → ')}
+                            </span>
+                        </div>
+                        <div style="padding: 1rem; background: var(--bg-tertiary); border-radius: 8px; border-left: 3px solid #00e676;">
+                            <strong style="color: #00e676;">DELIVERY ROUTE</strong><br>
+                            <span style="color: var(--text-secondary); font-size: 0.9rem;">
+                                Algorithm: ${route.delivery.algorithm}<br>
+                                Path: ${route.delivery.path.join(' → ')}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayComparison(comparison) {
+            const container = document.getElementById('comparison-container');
+            
+            let html = `
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">⚡ Algorithm Performance Comparison</h3>
+                        <span class="badge badge-info">Analysis</span>
+                    </div>
+                    
+                    <h4 style="margin: 1rem 0; color: var(--accent-primary);">Pickup Route Algorithms:</h4>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Algorithm</th>
+                                <th>Distance (km)</th>
+                                <th>Nodes Explored</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            Object.values(comparison.pickup).forEach(algo => {
+                html += `
+                    <tr>
+                        <td><strong>${algo.name}</strong></td>
+                        <td>${algo.distance}</td>
+                        <td>${algo.nodes_explored}</td>
+                        <td>${algo.description}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+
+                    <h4 style="margin: 1.5rem 0 1rem; color: var(--accent-primary);">Delivery Route Algorithms:</h4>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Algorithm</th>
+                                <th>Distance (km)</th>
+                                <th>Nodes Explored</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            Object.values(comparison.delivery).forEach(algo => {
+                html += `
+                    <tr>
+                        <td><strong>${algo.name}</strong></td>
+                        <td>${algo.distance}</td>
+                        <td>${algo.nodes_explored}</td>
+                        <td>${algo.description}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function displayExplanation(explanation) {
+            const container = document.getElementById('explanation-container');
+            
+            container.innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📋 Route Explanation</h3>
+                        <span class="badge badge-info">Details</span>
+                    </div>
+                    <div class="explanation">
+${explanation}
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
